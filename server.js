@@ -5,7 +5,7 @@ require('dotenv').config(); // Load environment variables from .env file
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-const fetch = require('node-fetch'); // Use node-fetch for making API requests
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args)); // Use dynamic import for node-fetch
 
 const app = express();
 
@@ -89,12 +89,12 @@ app.post('/api/gemini-proxy', apiLimiter, usageAndAuthMiddleware, async (req, re
     }
 });
 
-// **NEW** Search Proxy Endpoint
-app.post('/api/search-proxy', apiLimiter, usageAndAuthMiddleware, async (req, res) => {
-    const { userId, searchPayload } = req.body;
+// Image Proxy Endpoint
+app.post('/api/image-proxy', apiLimiter, usageAndAuthMiddleware, async (req, res) => {
+    const { userId, query, startIndex } = req.body;
     const userUsage = req.userUsage;
 
-    if (!searchPayload || !searchPayload.query) {
+    if (!query) {
         return res.status(400).json({ error: 'Missing search query in request body' });
     }
     
@@ -103,7 +103,6 @@ app.post('/api/search-proxy', apiLimiter, usageAndAuthMiddleware, async (req, re
         return res.status(500).json({ error: "Server configuration error." });
     }
     
-    const { query, startIndex } = searchPayload;
     const fields = "items(link,image/thumbnailLink,displayLink,image/contextLink),searchInformation";
     const apiUrl = `https://www.googleapis.com/customsearch/v1?key=${SEARCH_API_KEY}&cx=${CX_ID}&q=${encodeURIComponent(query)}&searchType=image&imgSize=large&num=10&start=${startIndex || 1}&fields=${encodeURIComponent(fields)}`;
 
@@ -120,7 +119,7 @@ app.post('/api/search-proxy', apiLimiter, usageAndAuthMiddleware, async (req, re
             res.status(apiResponse.status).json(data);
         }
     } catch (error) {
-        console.error('Search Proxy Error:', error);
+        console.error('Image Proxy Error:', error);
         res.status(500).json({ error: "An error occurred on the proxy server." });
     }
 });
